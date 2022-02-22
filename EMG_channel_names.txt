@@ -1,0 +1,10 @@
+# This file must contains 8 entries with a channel names.
+# Empty lines and lines starting with '#' are ignored.
+Right FDI
+Left FDI
+Right BB
+Left BB
+Right VL
+Left VL
+Right TA
+Left TA
