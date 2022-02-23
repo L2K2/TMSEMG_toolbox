@@ -48,8 +48,8 @@ classdef MagProController<handle
     %% Internal member variables
     
     properties(Access=private)
-		% Interface version for serial port (0 = serialport, 1 = serial)
-		isOlderThanR2019b
+        % Interface version for serial port (0 = serialport, 1 = serial)
+        isOlderThanR2019b
         % A serial port object
         serialport
         % An internal data buffer for serial data
@@ -78,7 +78,7 @@ classdef MagProController<handle
             % This will reserve a serial port device for the class.
             %
             % Author Lari Koponen
-            % Version 20210223
+            % Version 20220223
             
             % Validate user input
             assert(nargin>0,'Provide ''serialport'' as an input argument.');
@@ -90,20 +90,20 @@ classdef MagProController<handle
             assert(any(strcmp(serialports,serialportname)),'Serial port named ''%s'' does not exists or it is already in use.',serialportname);
             
             % Check MATLAB version
-			obj.isOlderThanR2019b=verLessThan('matlab','9.7');
+            obj.isOlderThanR2019b=verLessThan('matlab','9.7');
             
             % Select appropriate serial port interface based on version
-			if obj.isOlderThanR2019b
-				obj.serialport=serial(serialportname);
-				obj.serialport.BaudRate=38400;
-				obj.serialport.BytesAvailableFcnCount=4;
-				obj.serialport.BytesAvailableFcnMode='byte';
-				obj.serialport.BytesAvailableFcn={@(src,evt) obj.callback(src,evt)};        
-				fopen(obj.serialport);
-			else
-				obj.serialport=serialport(serialportname,38400);
-				configureCallback(obj.serialport,'byte',4,@(src,evt) obj.callback(src,evt));
-			end
+            if obj.isOlderThanR2019b
+                obj.serialport=serial(serialportname);
+                obj.serialport.BaudRate=38400;
+                obj.serialport.BytesAvailableFcnCount=4;
+                obj.serialport.BytesAvailableFcnMode='byte';
+                obj.serialport.BytesAvailableFcn={@(src,evt) obj.callback(src,evt)};        
+                fopen(obj.serialport);
+            else
+                obj.serialport=serialport(serialportname,38400);
+                configureCallback(obj.serialport,'byte',4,@(src,evt) obj.callback(src,evt));
+            end
             
             if nargin==1
                 obj.logfilename=[tempname('.') '.txt'];
@@ -129,7 +129,7 @@ classdef MagProController<handle
             end
             
             if obj.isOlderThanR2019b
-				fclose(obj.serialport);
+                fclose(obj.serialport);
             else
                 delete(obj.serialport);
             end
