@@ -73,6 +73,10 @@ classdef TMSEMG_exported < matlab.apps.AppBase
         RDA_index=0;              % RDA event count
         RDA_MEP MEP               % TMS-EMG analysis class, filter() and identify()
         
+        % Properties related to EMG visualisation
+        EMG_N_channel=8;  % Default number of channels shown, updates automatically based on RDA data.
+        EMG_channel_names % A cell-array of channel names, loaded at startup
+        
         % Class handle to control a TMS device
         TMS_device MagProController % A class handle to the TMS device
         TMS_index=0;                % TMS pulse count
@@ -234,11 +238,16 @@ classdef TMSEMG_exported < matlab.apps.AppBase
                     
                     app.data.EMG{app.RDA_index}={datetime() x y c};
                     app.data_isSaved=false;
+                    
+                    % Update number of panels (slow, but should only happen once per use)
+                    if size(x,1)~=app.EMG_N_channel
+                        app.update_EMG_UIAxes(size(x,1));
+                    end
                 
                     C=[1 0.75 0.75;1 1 1;0.75 1 0.75];
                     % Plot new data to GUI
                     app.EMGindex.Value=app.RDA_index;
-                    for i=1:8
+                    for i=1:app.EMG_N_channel
                         set(app.UIAxesText(i),'String',sprintf('%.1f µV',c(i,1)));
                         set(app.UIAxesPlot(i),'YData',y(i,:));
                         set(app.UIAxes(i),'Color',C(2+c(i,2),:));
@@ -248,6 +257,47 @@ classdef TMSEMG_exported < matlab.apps.AppBase
             
         end
         
+        
+        function update_EMG_UIAxes(app,N)
+            % Set number of axes
+            app.EMG_N_channel=N;
+            
+            % Remove previous axes
+            delete(app.UIAxes);
+            app.UIAxesPlot=[];
+            app.UIAxesText=[];
+            
+            % Generate UIAxes for the EMG data
+            tmp_UIAxes_height=floor(800/ceil(app.EMG_N_channel/2));
+            for i=1:app.EMG_N_channel
+                app.UIAxes(i)=uiaxes(app.TMSEMGremotecontrolUIFigure);
+                if i<=numel(app.EMG_channel_names)
+                    title(app.UIAxes(i),sprintf('#%s',app.EMG_channel_names{i}));
+                else
+                    title(app.UIAxes(i),sprintf('#%d',i));                    
+                end
+                xlabel(app.UIAxes(i),'Time (ms)');
+                ylabel(app.UIAxes(i),'EMG (µV)');
+                app.UIAxes(i).XLim=[-100 250];
+                app.UIAxes(i).YLim=[-100 100];
+                app.UIAxes(i).Box='on';
+                app.UIAxes(i).LineWidth=2;
+                app.UIAxes(i).Position=[480*mod(i-1,2) 1010-tmp_UIAxes_height*floor((i+1)/2) 480 tmp_UIAxes_height];
+                app.UIAxesPlot(i)=plot(app.UIAxes(i),0.2*(-1000:1750),zeros(1,2751),'k-','LineWidth',2);
+                app.UIAxesText(i)=text(app.UIAxes(i),230,50,'0 µV','HorizontalAlignment','right','FontSize',24);
+            end
+            
+            % Update EMG channel selection for IO curve sampling
+            items=cell(1,app.EMG_N_channel);
+            for i=1:app.EMG_N_channel
+                if i<=numel(app.EMG_channel_names)
+                    items{i}=app.EMG_channel_names{i};
+                else
+                    items{i}=sprintf('%d',i);                    
+                end
+            end
+            app.IO_ChannelDropDown.Items=items;
+        end
     end
     
 
@@ -256,22 +306,6 @@ classdef TMSEMG_exported < matlab.apps.AppBase
 
         % Code that executes after component creation
         function startupFcn(app)
-            % Generate UIAxes for the EMG data
-            for i=1:8
-                app.UIAxes(i)=uiaxes(app.TMSEMGremotecontrolUIFigure);
-                title(app.UIAxes(i),sprintf('#%d',i));
-                xlabel(app.UIAxes(i),'Time (ms)');
-                ylabel(app.UIAxes(i),'EMG (µV)');
-                app.UIAxes(i).XLim=[-100 250];
-                app.UIAxes(i).YLim=[-100 100];
-                app.UIAxes(i).Box='on';
-                app.UIAxes(i).LineWidth=2;
-                % app.UIAxes(i).XGrid='on';
-                % app.UIAxes(i).YGrid='on';
-                app.UIAxes(i).Position=[480*mod(i-1,2) 1010-200*floor((i+1)/2) 480 200];
-                app.UIAxesPlot(i)=plot(app.UIAxes(i),0.2*(-1000:1750),zeros(1,2751),'k-','LineWidth',2);
-                app.UIAxesText(i)=text(app.UIAxes(i),230,50,'0 µV','HorizontalAlignment','right','FontSize',24);
-            end
             
             % Set up the filters
             app.RDA_MEP=MEP();
@@ -302,11 +336,13 @@ classdef TMSEMG_exported < matlab.apps.AppBase
                     items{end+1}=[num2str(index) ': ' line];
                     index=index+1;
                 end
-                assert(numel(items)==8,'Incorrect number of items.');
-                app.IO_ChannelDropDown.Items=items;
+                app.EMG_channel_names=items;
             catch
                 disp('Missing or incorrect file ''EMG_channel_names.txt'', using default channel names.');
             end
+            
+            % Generate UIAxes for the EMG data
+            app.update_EMG_UIAxes(app.EMG_N_channel);
             
             % Create timer objects
             app.IOC_timer=timer('ExecutionMode','fixedRate','Period',0.050,'BusyMode','drop','TimerFcn',@app.sample_IOC); 
