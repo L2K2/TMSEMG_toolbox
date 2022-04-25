@@ -5,11 +5,11 @@ classdef MEP
     %   No public properties.
     %
     % MEP methods:
-    %   filter() - Filters raw EMG data block of size [8 2751], fs=5000
-    %   identify() - Identifies MEP responses from filtered data.
+    %   y=filter(x) - Filters raw EMG data block of size [N 2751], fs=5000
+    %   c=identify(y) - Identifies MEP responses from filtered data.
     %
     % Author Lari Koponen
-    % Version 2021-04-30
+    % Version 2022-04-25
    
     properties(Access=private)
         
@@ -101,10 +101,14 @@ classdef MEP
             %   De-mean the data to a pre-pulse baseline.
             %
             % Author Lari Koponen
-            % Version 2021-04-17
+            % Version 2022-04-25
             
+            % Check that there is correct number of time points
+            assert(size(x,2)==2751,'EMG data must be an N by 2751 array.');
+            
+            % For each channel in data, filter
             y=x;
-            for i=1:8
+            for i=1:size(x,1)
                 % Select i'th channel
                 v=x(i,:);
                 % Fit and remove line frequency and its odd harmonics
@@ -135,9 +139,9 @@ classdef MEP
             %
             % y = IDENTIFY(x)
             %
-            % x = [8 2751] data matrix of filtered data
+            % x = [N 2751] data matrix of filtered data
             %
-            % y = [8 2] data matrix
+            % y = [N 2] data matrix
             %   The first column contains the MEP amplitudes.
             %   The second column contains trinary category:
             %       1 = MEP
